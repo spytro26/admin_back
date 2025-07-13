@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://neondb_owner:npg_ncbaq0eIAO1G@ep-wandering-moon-a5zj4m27-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  username       String   @unique
+  phone          String   @unique
+  password       String
+  pin            String?
+  localArea      String?
+  coinsAvailable Int?     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cartItems      Cart[]
+  coinsReceived  Coin[]   @relation("ToUser")
+  orders         Order[]  @relation("UserOrders")
+}
+
+model ShopKeeper {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  name      String
+  verified  Boolean  @default(false)
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  adver     Adver[]
+  shops     Shop[]
+}
+
+model Shop {
+  id        Int        @id @default(autoincrement())
+  tagline   String
+  image     String?
+  pin       String
+  localArea String
+  ownerId   Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  name      String
+  rating    Int        @default(0)
+  closes    DateTime?
+  coinValue Int
+  opens     DateTime?
+  isActive  Boolean    @default(true)
+  adver     Adver[]
+  coinsSent Coin[]     @relation("FromShop")
+  orders    Order[]    @relation("ShopOrders")
+  products  Product[]
+  owner     ShopKeeper @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  soldToId    Int?
+  productId   Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  quantity    Int
+  shopId      Int
+  status      OrderStatus @default(PENDING)
+  soldOffline Boolean     @default(false)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seller      Shop        @relation("ShopOrders", fields: [shopId], references: [id], onDelete: Cascade)
+  consumer    User?       @relation("UserOrders", fields: [soldToId], references: [id], onDelete: SetNull)
+}
+
+model Coin {
+  id        Int      @id @default(autoincrement())
+  transFrom Int
+  transTo   Int
+  volume    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fromShop  Shop     @relation("FromShop", fields: [transFrom], references: [id], onDelete: Cascade)
+  toUser    User     @relation("ToUser", fields: [transTo], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  image                String?
+  shopId               Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  quantity             Int
+  price                Int
+  canBePurchasedByCoin Boolean  @default(false)
+  cartItems            Cart[]
+  orders               Order[]
+  shop                 Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Adver {
+  id           Int         @id @default(autoincrement())
+  image        String?
+  title        String
+  message      String
+  shopId       Int
+  createdAt    DateTime    @default(now())
+  shopKeeperId Int?
+  clicks       Int         @default(0)
+  views        Int         @default(0)
+  shop         Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id], onDelete: SetNull)
+}
+
+model Feedback {
+  id           Int     @id @default(autoincrement())
+  ownerId      Int?
+  userId       Int?
+  title        String
+  description  String
+  feedbackType String
+  time         String
+  isSolved     Boolean @default(false)
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
